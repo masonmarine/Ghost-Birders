@@ -1,3 +1,86 @@
 ```{r}
 1+1
 ```
+
+```{r}
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+remotes::install_github("ebird/ebirdst")
+
+```
+
+```{r}
+library(fields)
+library(rnaturalearth)
+library(sf)
+library(terra)
+library(ebirdst)
+set_ebirdst_access_key("lcjc4puu8sc1")
+# download example data, yellow-bellied sapsucker in michigan
+ebirdst_download_status(species = "yebsap-example")
+
+# load relative abundance raster stack with 52 layers, one for each week
+abd <- load_raster("yebsap-example", resolution = "27km")
+
+# load species specific mapping parameters
+pars <- load_fac_map_parameters("yebsap-example")
+# custom coordinate reference system
+crs <- st_crs(pars$custom_projection)
+# legend breaks
+breaks <- pars$weekly_bins
+# legend labels for top, middle, and bottom
+labels <- pars$weekly_labels
+
+# the date that each raster layer corresponds to is stored within the labels
+weeks <- as.Date(names(abd))
+print(weeks)
+```
+
+```{r}
+library(dplyr)
+library(ebirdst)
+library(fields)
+library(ggplot2)
+library(lubridate)
+library(rnaturalearth)
+library(sf)
+library(terra)
+library(tidyr)
+extract <- terra::extract
+set_ebirdst_access_key("lcjc4puu8sc1", overwrite = TRUE)
+
+# download the yellow-bellied sapsucker data
+ebirdst_download_status("sagthr",
+                        pattern = "abundance_seasonal_mean")
+
+# load seasonal mean relative abundance at 3km resolution
+abd_seasonal <- load_raster("sagthr", 
+                            product = "abundance", 
+                            period = "seasonal",
+                            metric = "mean",
+                            resolution = "3km")
+
+# extract just the breeding season relative abundance
+abd_breeding <- abd_seasonal[["breeding"]]
+```
+
+```{r}
+plot(abd_breeding, axes = FALSE)
+```
+
+```{r}
+# wyoming boundary
+region_boundary <- ne_states(iso_a2 = "US") |> 
+  filter(name == "Wyoming")
+
+# project boundary to match raster data
+region_boundary_proj <- st_transform(region_boundary, st_crs(abd_breeding))
+
+# crop and mask to boundary of wyoming
+abd_breeding_mask <- crop(abd_breeding, region_boundary_proj) |> 
+  mask(region_boundary_proj)
+
+# map the cropped data
+plot(abd_breeding_mask, axes = FALSE)
+```
