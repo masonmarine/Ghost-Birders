@@ -7,7 +7,9 @@ reference documentation url: https://cornelllabofornithology.github.io/ebird-bes
 ---
 
 # Preparing data
-## 1.3.6 Download GIS data 
+
+## 1.3.6 Download GIS data
+
 ```{r}
 #BCR NO WORK SO FAR 
 library(sf)
@@ -71,8 +73,8 @@ write_sf(ne_state_lines, f_ne, "ne_state_lines")
 write_sf(bcr, f_ne, "bcr")
 ```
 
-
 ## 2.2 Data extraction with auk
+
 ```{r}
 library(auk)
 library(dplyr)
@@ -132,11 +134,13 @@ if (!file.exists(f_ebd_cornell)) {
 ```
 
 ## 2.3 Importing and zero-filling
+
 ```{r}
 ebd_zf <- auk_zerofill(f_ebd_cornell, f_sampling_cornell, collapse = TRUE)
 ```
 
 Convert 'x' to NA
+
 ```{r}
 # function to convert time observation to hours since midnight
 time_to_decimal <- function(x) {
@@ -176,6 +180,7 @@ ebd_zf_filtered <- ebd_zf %>%
 ```
 
 Removing redundant variables
+
 ```{r}
 # only include columns of interest
 ebird <- ebd_zf_filtered %>% 
@@ -194,7 +199,9 @@ write_csv(ebird, "data_processed_cornell/ebd_comyel_zf.csv", na = "")
 ```
 
 # Relative abundance
+
 ## 6.2 Data preparation
+
 ```{r}
 library(lubridate)
 library(sf)
@@ -257,7 +264,8 @@ ne_state_lines <- read_sf("data/gis-data.gpkg", "ne_state_lines") %>%
   st_geometry()
 ```
 
-## 6.2.1 Spatiotemporal subsampling 
+## 6.2.1 Spatiotemporal subsampling
+
 ```{r}
 # generate hexagonal grid with ~ 5 km betweeen cells
 dggs <- dgconstruct(spacing = 5)
@@ -275,6 +283,7 @@ ebird_ss <- checklist_cell %>%
 ```
 
 6.2.2 Test-train split
+
 ```{r}
 hab_covs <- c("pland_04_deciduous_broadleaf", 
               "pland_05_mixed_forest",
@@ -296,7 +305,8 @@ map_int(ebird_split, nrow)
 #>  3941 16145
 ```
 
-## 6.3 Exploratory data analysis 
+## 6.3 Exploratory data analysis
+
 ```{r}
 p <- par(mfrow = c(1, 2))
 # counts with zeros
@@ -309,7 +319,8 @@ hist(pos_counts, main = "Histogram of counts > 0",
 par(p)
 ```
 
-## 6.4 Abundance models 
+## 6.4 Abundance models
+
 ```{r}
 # gam parameters
 # degrees of freedom for smoothing
@@ -344,7 +355,8 @@ gam_formula
 #>     k = 7)
 ```
 
-Fitting the models 
+Fitting the models
+
 ```{r}
 # explicitly specify where the knots should occur for time_observations_started
 # this ensures that the cyclic spline joins the variable at midnight
@@ -371,7 +383,8 @@ m_tw <- gam(gam_formula,
             knots = time_knots)
 ```
 
-## 6.5 Assessment 
+## 6.5 Assessment
+
 ```{r}
 obs_count <- select(ebird_split$test, obs = observation_count)
 
@@ -398,7 +411,8 @@ test_pred <- bind_rows(m_ziplss_pred, m_nb_pred, m_tw_pred) %>%
   mutate(family = as_factor(family))
 ```
 
-## 6.5.1 Predictive performance: ranking 
+## 6.5.1 Predictive performance: ranking
+
 ```{r}
 # spearman’s rank correlation
 test_pred %>% 
@@ -410,6 +424,7 @@ test_pred %>%
 ```
 
 ## 6.5.2 Predictive performance: magnitude
+
 ```{r}
 # plot predicted vs. observed
 ticks <- c(0, 1, 10, 100, 1000)
@@ -435,7 +450,8 @@ ggplot(test_pred) +
   facet_wrap(~ family, nrow = 1)
 ```
 
-## 6.5.3 Assessing covariate effects 
+## 6.5.3 Assessing covariate effects
+
 ```{r}
 # ggplot function
 plot_gam <- function(m, title = NULL, ziplss = c("presence", "abundance")) {
@@ -483,6 +499,7 @@ pred_model <- m_nb
 ```
 
 ## 6.6 Prediction
+
 ```{r}
 # create a dataframe of covariates with a range of start times
 seq_tod <- seq(0, 24, length.out = 300)
@@ -526,7 +543,8 @@ ggplot(pred_tod) +
        subtitle = "Peak detectability shown as dashed blue line")
 ```
 
-Generating prediction surface and making predictions at all points 
+Generating prediction surface and making predictions at all points
+
 ```{r}
 # add effort covariates to prediction surface
 pred_surface_eff <- pred_surface %>% 
@@ -553,6 +571,7 @@ pred <- predict(pred_model, newdata = pred_surface_eff,
 ```
 
 Convert dataframe to spatial features and rasterize points using prediction surface raster template
+
 ```{r}
 r_pred <- pred %>% 
   # convert to spatial features
@@ -576,7 +595,8 @@ writeRaster(r_pred[["abd_se"]],
             overwrite = TRUE)
 ```
 
-Making maps 
+Making maps
+
 ```{r}
 # any expected abundances below this threshold are set to zero
 zero_threshold <- 0.05
@@ -648,4 +668,3 @@ for (nm in names(r_pred)) {
                                 cex = 1, line = 0))
 }
 ```
-
