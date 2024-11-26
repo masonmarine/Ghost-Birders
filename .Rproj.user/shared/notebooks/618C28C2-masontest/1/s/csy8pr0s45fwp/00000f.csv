@@ -1,0 +1,51 @@
+"0","#BCR NO WORK SO FAR "
+"0","library(sf)"
+"2","Linking to GEOS 3.10.2, GDAL 3.4.1, PROJ 8.2.1; sf_use_s2() is TRUE
+"
+"0","library(rnaturalearth)"
+"0","library(dplyr)"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"0","# file to save spatial data"
+"0","gpkg_dir <- ""data"""
+"0","if (!dir.exists(gpkg_dir)) {"
+"0","  dir.create(gpkg_dir)"
+"0","}"
+"0","f_ne <- file.path(gpkg_dir, ""gis-data.gpkg"")"
+"0",""
+"0","# download bcrs"
+"0","tmp_dir <- normalizePath(tempdir())"
+"0","tmp_bcr <- file.path(tmp_dir, ""bcr.zip"")"
+"0","paste0(""https://www.birdscanada.org/research/gislab/download/"", "
+"0","       ""bcr_terrestrial_shape.zip"") %>% "
+"0","  download.file(destfile = tmp_bcr)"
+"2","trying URL 'https://www.birdscanada.org/research/gislab/download/bcr_terrestrial_shape.zip'
+"
+"2","downloaded 324 KB
+
+"
+"0","unzip(tmp_bcr, exdir = tmp_dir)"
+"2","Warning in unzip(tmp_bcr, exdir = tmp_dir) :"
+"2","
+ "
+"2"," error 1 in extracting from zip file
+"
+"0","#YK: BCR NO WORK "
+"0","bcr <- file.path(tmp_dir, ""BCR_Terrestrial_master_International.shp"") %>% "
+"0","  read_sf() %>% "
+"0","  select(bcr_code = BCR, bcr_name = LABEL) %>% "
+"0","  filter(bcr_code == 27)"
+"2","Error: Cannot open ""/tmp/RtmpSH2sjU/BCR_Terrestrial_master_International.shp""; The file doesn't seem to exist.
+"
