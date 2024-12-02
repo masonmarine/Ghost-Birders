@@ -16,7 +16,7 @@ library(rnaturalearth)
 library(sf)
 library(terra)
 library(ebirdst)
-#set_ebirdst_access_key("lcjc4puu8sc1")
+set_ebirdst_access_key("lcjc4puu8sc1")
 # download example data, tundra swan in nc
 ebirdst_download_status(species = "tunswa")
 
@@ -123,3 +123,9 @@ pal <- c("#e6e6e6", pal)
 # map using the quantile bins
 plot(abd_year_laea, breaks = breaks, col = pal, axes = FALSE)
 ```
+
+```{r}
+# Export into raster 
+writeRaster(abd_year_laea, "abd_year_laea.tif", overwrite=TRUE)
+```
+
