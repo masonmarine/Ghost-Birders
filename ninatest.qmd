@@ -128,4 +128,3 @@ plot(abd_year_laea, breaks = breaks, col = pal, axes = FALSE)
 # Export into raster 
 writeRaster(abd_year_laea, "abd_year_laea.tif", overwrite=TRUE)
 ```
-
