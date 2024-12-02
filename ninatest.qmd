@@ -1,5 +1,5 @@
 ```{r}
-1+1
+library(tidyverse)
 ```
 
 ```{r}
@@ -16,15 +16,15 @@ library(rnaturalearth)
 library(sf)
 library(terra)
 library(ebirdst)
-set_ebirdst_access_key("lcjc4puu8sc1")
-# download example data, yellow-bellied sapsucker in michigan
-ebirdst_download_status(species = "yebsap-example")
+#set_ebirdst_access_key("lcjc4puu8sc1")
+# download example data, tundra swan in nc
+ebirdst_download_status(species = "tunswa")
 
 # load relative abundance raster stack with 52 layers, one for each week
-abd <- load_raster("yebsap-example", resolution = "27km")
+abd <- load_raster("tunswa", resolution = "27km")
 
 # load species specific mapping parameters
-pars <- load_fac_map_parameters("yebsap-example")
+pars <- load_fac_map_parameters("tunswa")
 # custom coordinate reference system
 crs <- st_crs(pars$custom_projection)
 # legend breaks
@@ -50,37 +50,76 @@ library(tidyr)
 extract <- terra::extract
 set_ebirdst_access_key("lcjc4puu8sc1", overwrite = TRUE)
 
-# download the yellow-bellied sapsucker data
-ebirdst_download_status("sagthr",
-                        pattern = "abundance_seasonal_mean")
+# download the tundra swan data
+ebirdst_download_status("tunswa",
+                        pattern = "abundance_full-year_mean")
 
 # load seasonal mean relative abundance at 3km resolution
-abd_seasonal <- load_raster("sagthr", 
+abd_year <- load_raster("tunswa", 
                             product = "abundance", 
-                            period = "seasonal",
+                            period = "full-year",
                             metric = "mean",
                             resolution = "3km")
 
 # extract just the breeding season relative abundance
-abd_breeding <- abd_seasonal[["breeding"]]
+#abd_breeding <- abd_seasonal[["breeding"]]
 ```
 
 ```{r}
-plot(abd_breeding, axes = FALSE)
+plot(abd_year, axes = FALSE)
 ```
 
 ```{r}
-# wyoming boundary
+# nc boundary
 region_boundary <- ne_states(iso_a2 = "US") |> 
-  filter(name == "Wyoming")
+  filter(name == "North Carolina")
 
 # project boundary to match raster data
-region_boundary_proj <- st_transform(region_boundary, st_crs(abd_breeding))
+region_boundary_proj <- st_transform(region_boundary, st_crs(abd_year))
 
 # crop and mask to boundary of wyoming
-abd_breeding_mask <- crop(abd_breeding, region_boundary_proj) |> 
+abd_year_mask <- crop(abd_year, region_boundary_proj) |> 
   mask(region_boundary_proj)
 
 # map the cropped data
-plot(abd_breeding_mask, axes = FALSE)
+plot(abd_year_mask, axes = FALSE)
+```
+
+```{r}
+# find the centroid of the region
+region_centroid <- region_boundary |> 
+  st_geometry() |> 
+  st_transform(crs = 4326) |> 
+  st_centroid() |> 
+  st_coordinates() |> 
+  round(1)
+
+# define projection
+crs_laea <- paste0("+proj=laea +lat_0=", region_centroid[2],
+                   " +lon_0=", region_centroid[1])
+
+# transform to the custom projection using nearest neighbor resampling
+abd_year_laea <- project(abd_year_mask, crs_laea, method = "near") |> 
+  # remove areas of the raster containing no data
+  trim()
+
+# map the cropped and projected data
+plot(abd_year_laea, axes = FALSE, breakby = "cases")
+```
+
+```{r}
+# quantiles of non-zero values
+v <- values(abd_year_laea, na.rm = TRUE, mat = FALSE)
+v <- v[v > 0]
+breaks <- quantile(v, seq(0, 1, by = 0.1))
+# add a bin for 0
+breaks <- c(0, breaks)
+
+# status and trends palette
+pal <- ebirdst_palettes(length(breaks) - 2)
+# add a color for zero
+pal <- c("#e6e6e6", pal)
+
+# map using the quantile bins
+plot(abd_year_laea, breaks = breaks, col = pal, axes = FALSE)
 ```
